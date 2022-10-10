@@ -48,7 +48,7 @@ public class CRUDService {
                 
                 //System.out.println(conta.getLapide());
                 
-                if(conta.getLapide() == ' ') {
+                if(conta.getLapide() != '*') {
                     
 
                     if(conta.getIdConta() == id) {
@@ -57,6 +57,16 @@ public class CRUDService {
                         System.out.println(" O Registro pesquisado com sucesso \n");
                         System.out.println("_________________________________________\n\n");
                         System.out.println(conta.toString());
+                        break;
+                    }
+
+                } else {
+
+                    if(conta.getIdConta() == id) {
+                        encontrado = true;
+                        System.out.println("\n\n_________________________________________");
+                        System.out.println(" O Registro pesquisado foi não foi encontrado \n");
+                        System.out.println("_________________________________________\n\n");
                         break;
                     }
 
@@ -130,44 +140,41 @@ public class CRUDService {
         long pos0 = 0;
         long  pos1;
 
+        System.out.println("Comecando processo de deleção do Ragistro");
         
         try  {
-            RandomAccessFile arq = new RandomAccessFile("dados/contas.db", "rw");
+            RandomAccessFile arq = new RandomAccessFile("contas.db", "rw");
+            RandomAccessFile auxptr = new RandomAccessFile("contas.db", "rw");
+
             int aux = arq.readInt();
-            //System.out.println("Chegou aqui ");
+            aux = auxptr.readInt();
+           
             pos0 = arq.getFilePointer();
             
             while (pos0 != arq.length()) {
 
                 int tam = arq.readInt();
-                ba = new byte[tam];
-                pos1 = arq.getFilePointer();
-                arq.read(ba);
-                pos0 += ba.length;
-                conta.fromByteArray(ba);
-                
-                
-                //System.out.println(conta.getLapide());
-                
-                if(conta.getLapide() == ' ') {
-                    
+                pos0 = arq.getFilePointer();
 
-                    if(conta.getIdConta() == id) {
-                        conta.setLapide('*');
-                        arq.seek(pos1);
-                        ba = conta.toByteArray();
-                        arq.write(ba);
+                aux  = auxptr.readInt();
+                aux  = auxptr.readInt();
+
+                int idRegistro = arq.readInt();
+                
+                if(idRegistro == id) {
+                        auxptr.writeChar('*');
+
 
                         System.out.println("\n\n\n\n\n_________________________________________");
-                        System.out.println(" Registro deletado com sucesso\n");
-                        System.out.println("_________________________________________");
-                        System.out.println("\n Esse foi o registro deletado:\n");
-                        System.out.println("_________________________________________");
+                        System.out.println(" Registro com ID "+id+" deletado com sucesso\n");
+                        System.out.println("_________________________________________\n\n\n");
+                        break;
 
-                        System.out.println(conta.toString());
-                    }
+                } 
 
-                }
+                arq.seek(pos0+tam);
+                auxptr.seek(arq.getFilePointer());
+                
 
                 
 
@@ -175,6 +182,7 @@ public class CRUDService {
             
             
             arq.close();
+            auxptr.close();
         } catch (Exception e) {
             // TODO Auto-generated catch block
             
@@ -187,21 +195,17 @@ public class CRUDService {
     }
 
     
-    public void atualizar(int id)  { 
-        Conta conta = new Conta();
+    public void atualizar(Conta conta)  { 
+        //Conta conta = new Conta();
 
-        byte[] ba;
-
-        byte[] baAux01,baAux02;
+        byte[] ba, baAux;
+        boolean encontrado = false;
 
         int len;
         long pos0 = 0;
         long  pos1 = 0;
 
-        Conta contaAux = new Conta();
-
         
-    
         try {
 
             RandomAccessFile arq = new RandomAccessFile("contas.db", "rw");
@@ -212,62 +216,70 @@ public class CRUDService {
             while (pos0 != arq.length()) {
 
                 int tam = arq.readInt();
-
                 pos1 = arq.getFilePointer();
 
+                int id  = arq.readInt();
+                char lapide = arq.readChar(); 
+
+                arq.seek(pos1);
                 ba = new byte[tam];
                 arq.read(ba);
                 pos0 += ba.length;
                 conta.fromByteArray(ba);
+
+                Conta auxConta = alterarRegistro(conta);
                 
                 
-                //System.out.println(conta.getLapide());
+                System.out.println("Essa é a lapide "+lapide+"\n\n\n\\n");
+                baAux = new byte[auxConta.toByteArray().length];
+                baAux = auxConta.toByteArray();
                 
-                if(conta.getLapide() == ' ') {
-                    
+                if(conta.getIdConta() == id){
 
-                    if(conta.getIdConta() == id) {
-                        contaAux = alterarRegistro(conta);
+                    if(baAux.length == tam) {
+                        
+                        arq.seek(pos1);
+                        arq.write(baAux);
 
-                        baAux01 = conta.toByteArray();
-                        baAux02 = contaAux.toByteArray();
-
-                        if(baAux01.length == baAux02.length){
-                            arq.seek(pos1);
-                            arq.write(baAux02);
-
-                        } else {
-                            arq.seek(pos1);
-                            conta.setLapide('*');
-                            baAux01 = conta.toByteArray();
-
-                            arq.write(baAux01);
-
-                            criar(contaAux);
-
-                        }
-
-                        System.out.println("\n\n\n\n\n_________________________________________");
-                        System.out.println(" Registro atualizado com sucesso");
-
-                        System.out.println("_________________________________________");
-
-                        System.out.println("\nVersão Atual do Registro\n");
+                        
+                        encontrado = true;
+                        System.out.println("\n\n_________________________________________");
+                        System.out.println(" O Registro foi atualizado com sucesso \n");
                         System.out.println("_________________________________________\n\n");
+                        System.out.println(conta.toString());
+                        break;
+                        
 
-                        System.out.println(contaAux.toString());
+                    } else {
+
+                        arq.seek(arq.length());
+                        arq.writeInt(baAux.length);
+                        arq.write(baAux);
+
+                        encontrado = true;
+                        System.out.println("\n\n_________________________________________");
+                        System.out.println(" O Registro foi atualizado com sucesso  \n");
+                        System.out.println("_________________________________________\n\n");
+                        break;
+                        
+
                     }
-
                 }
 
+            }
+
+            if(!encontrado) {
+                System.out.println("\n\n_________________________________________");
+                    System.out.println(" Esse registro não está armazenado  \n");
+                    System.out.println("_________________________________________\n\n");
             }
             
             
             arq.close();
            
         } catch(Exception e) {
-            /* */
-        }
+            
+        } 
 
         
 

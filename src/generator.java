@@ -104,15 +104,30 @@ public class generator {
         }
 
 
-        crud.ler(2 );
-        crud.ler(4 );
-        crud.ler(11);
-        crud.ler(24 );
-        crud.ler(53 );
+       // crud.ler(2 );
+        //crud.ler(4 );
+       // crud.ler(11);
+       // crud.deletar(27);
+        //crud.deletar(33);
 
-        //crud.deletar(11);
+        //crud.deletar(13);
 
-        //crud.atualizar(4);
+        /*Conta tmp = new Conta();
+        tmp.setIdConta(4);
+        crud.atualizar(tmp);
+
+        tmp.setIdConta(34);
+        crud.atualizar(tmp);
+
+        tmp.setIdConta(25);
+        crud.atualizar(tmp);*/
+
+        crud.ler(4);
+        crud.ler(34);
+        crud.ler(25);
+        
+
+       // crud.ler(13);
 
         System.out.println("Esse é o fim");
 
