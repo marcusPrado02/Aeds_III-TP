@@ -21,11 +21,13 @@ public class CRUDService {
     // Not Finished
     public void ler(int id) {
         Conta conta = new Conta();
+        Conta result = new Conta();
+        char lapideBusca = ' ';
         
         byte[] ba;
         int len;
         long pos0 = 0; long pos1 = 0;
-        boolean encontrado = false;
+        //boolean encontrado = false;
 
         System.out.println("\n\n\n\n\n_________________________________________");
                         System.out.println(" Procurando registro com ID "+id+" \n");
@@ -40,41 +42,44 @@ public class CRUDService {
             while (pos0 != arq.length()) {
 
                 int tam = arq.readInt();
+                pos1 = arq.getFilePointer();
+                int idConta = arq.readInt();
+                char lapide = arq.readChar();
+                arq.seek(pos1);
                 ba = new byte[tam];
                 arq.read(ba);
                 pos0 += ba.length;
                 conta.fromByteArray(ba);
+                //System.out.println(conta.toString());
                 
                 
-                //System.out.println(conta.getLapide());
+               // System.out.println(idConta);
                 
-                if(conta.getLapide() != '*') {
+                //if(conta.getLapide() != '*') {
                     
 
-                    if(conta.getIdConta() == id) {
-                        encontrado = true;
-                        System.out.println("\n\n_________________________________________");
-                        System.out.println(" O Registro pesquisado com sucesso \n");
-                        System.out.println("_________________________________________\n\n");
-                        System.out.println(conta.toString());
+                if(idConta == id ) {
+                    //encontrado = true;
+                    result = conta;
+                    lapideBusca = lapide;
+                    //System.out.println("chegou aqui");
+                    if(lapideBusca != '*' ){
                         break;
                     }
-
-                } else {
-
-                    if(conta.getIdConta() == id) {
-                        encontrado = true;
-                        System.out.println("\n\n_________________________________________");
-                        System.out.println(" O Registro pesquisado foi não foi encontrado \n");
-                        System.out.println("_________________________________________\n\n");
-                        break;
-                    }
-
+                    
                 }
 
+                
             }
 
-            if(!encontrado) {
+            if(result.getIdConta() == id && lapideBusca != '*') {
+                System.out.println("\n\n_________________________________________");
+                System.out.println(" O Registro pesquisado com sucesso \n");
+                System.out.println("_________________________________________\n\n");
+                System.out.println(result.toString());
+                
+            } else {
+                
                 System.out.println("\n\n\n\n\n_________________________________________");
                 System.out.println(" O Registro pesquisado não foi encontrado \n");
                 System.out.println("_________________________________________\n\n");
@@ -139,6 +144,7 @@ public class CRUDService {
         int len;
         long pos0 = 0;
         long  pos1;
+        boolean encontrado = false;
 
         System.out.println("Comecando processo de deleção do Ragistro");
         
@@ -161,14 +167,13 @@ public class CRUDService {
 
                 int idRegistro = arq.readInt();
                 
+
+
                 if(idRegistro == id) {
                         auxptr.writeChar('*');
+                        encontrado = true;
 
 
-                        System.out.println("\n\n\n\n\n_________________________________________");
-                        System.out.println(" Registro com ID "+id+" deletado com sucesso\n");
-                        System.out.println("_________________________________________\n\n\n");
-                        break;
 
                 } 
 
@@ -183,6 +188,16 @@ public class CRUDService {
             
             arq.close();
             auxptr.close();
+
+
+            if(encontrado) {
+                
+                System.out.println("\n\n\n\n\n_________________________________________");
+                System.out.println(" Registro com ID "+id+" deletado com sucesso\n");
+                System.out.println("_________________________________________\n\n\n");
+                
+            }
+
         } catch (Exception e) {
             // TODO Auto-generated catch block
             
@@ -247,7 +262,7 @@ public class CRUDService {
                         System.out.println(" O Registro foi atualizado com sucesso \n");
                         System.out.println("_________________________________________\n\n");
                         System.out.println(conta.toString());
-                        break;
+                        
                         
 
                     } else {
@@ -260,7 +275,7 @@ public class CRUDService {
                         System.out.println("\n\n_________________________________________");
                         System.out.println(" O Registro foi atualizado com sucesso  \n");
                         System.out.println("_________________________________________\n\n");
-                        break;
+                        
                         
 
                     }
@@ -268,7 +283,7 @@ public class CRUDService {
 
             }
 
-            if(!encontrado) {
+            if(encontrado) {
                 System.out.println("\n\n_________________________________________");
                     System.out.println(" Esse registro não está armazenado  \n");
                     System.out.println("_________________________________________\n\n");
