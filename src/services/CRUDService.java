@@ -23,6 +23,7 @@ public class CRUDService {
         Conta conta = new Conta();
         Conta result = new Conta();
         char lapideBusca = ' ';
+        char lapide = ' ';
         
         byte[] ba;
         int len;
@@ -44,18 +45,13 @@ public class CRUDService {
                 int tam = arq.readInt();
                 pos1 = arq.getFilePointer();
                 int idConta = arq.readInt();
-                char lapide = arq.readChar();
+                lapide = arq.readChar();
                 arq.seek(pos1);
                 ba = new byte[tam];
                 arq.read(ba);
                 pos0 += ba.length;
                 conta.fromByteArray(ba);
-                //System.out.println(conta.toString());
                 
-                
-               // System.out.println(idConta);
-                
-                //if(conta.getLapide() != '*') {
                     
 
                 if(idConta == id ) {
@@ -72,18 +68,6 @@ public class CRUDService {
                 
             }
 
-            if(result.getIdConta() == id && lapideBusca != '*') {
-                System.out.println("\n\n_________________________________________");
-                System.out.println(" O Registro pesquisado com sucesso \n");
-                System.out.println("_________________________________________\n\n");
-                System.out.println(result.toString());
-                
-            } else {
-                
-                System.out.println("\n\n\n\n\n_________________________________________");
-                System.out.println(" O Registro pesquisado não foi encontrado \n");
-                System.out.println("_________________________________________\n\n");
-            }
             
             
             arq.close();
@@ -92,6 +76,19 @@ public class CRUDService {
             //System.out.println(e);
         }
 
+        
+        if(result.getIdConta() == id && lapideBusca != '*') {
+            System.out.println("\n\n_________________________________________");
+            System.out.println(" O Registro pesquisado com sucesso \n");
+            System.out.println("_________________________________________\n\n");
+            System.out.println(result.toString());
+            
+        } else {
+            
+            System.out.println("\n\n\n\n\n_________________________________________");
+            System.out.println(" O Registro pesquisado não foi encontrado \n");
+            System.out.println("_________________________________________\n\n");
+        }
         
         
     }
@@ -190,20 +187,20 @@ public class CRUDService {
             auxptr.close();
 
 
-            if(encontrado) {
-                
-                System.out.println("\n\n\n\n\n_________________________________________");
-                System.out.println(" Registro com ID "+id+" deletado com sucesso\n");
-                System.out.println("_________________________________________\n\n\n");
-                
-            }
-
+            
         } catch (Exception e) {
             // TODO Auto-generated catch block
             
         }
 
         
+        if(encontrado) {
+            
+            System.out.println("\n\n\n\n\n_________________________________________");
+            System.out.println(" Registro com ID "+id+" deletado com sucesso\n");
+            System.out.println("_________________________________________\n\n\n");
+            
+        }
 
         
 
@@ -282,12 +279,6 @@ public class CRUDService {
                 }
 
             }
-
-            if(encontrado) {
-                System.out.println("\n\n_________________________________________");
-                    System.out.println(" Esse registro não está armazenado  \n");
-                    System.out.println("_________________________________________\n\n");
-            }
             
             
             arq.close();
@@ -295,6 +286,12 @@ public class CRUDService {
         } catch(Exception e) {
             
         } 
+
+        if(encontrado) {
+            System.out.println("\n\n_________________________________________");
+                System.out.println(" Esse registro não está armazenado  \n");
+                System.out.println("_________________________________________\n\n");
+        }
 
         
 
