@@ -1,6 +1,11 @@
 package services;
 
+/*
+ * Importações necessarias para o funcoinamento
+ * do Service de ordenação
+ */
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -8,21 +13,45 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.io.File;
+import java.io.FileInputStream;
 
 
-
+/*
+ * Classe que representa o service principal 
+ * da ordenação
+ */
 public class SortingService {
 
+    /*
+     * Atributos utilizados pelo service
+     */
     private int tamBloco; 
     private int numBlocos; 
+    private int lastId;
     private HashMap<Integer,Registro> registros;
     private ArrayList<TempRegistro> registrosAIntercalar;
     private Scanner sc;
 
+    /*
+     * Constructor vazio
+     */
+    public SortingService() {
+    }
+
+    /*
+     * Classe de registro utilizada para abstrair 
+     * a camada dos registros
+     */
     public class Registro {
         public int id;
         public int len;
         public long address;
+
+        public Registro(int id, long address) {
+            this.id = id;
+            this.address = address;
+        }
 
         public Registro(int id, int len, long address) {
             this.id = id;
@@ -32,13 +61,17 @@ public class SortingService {
 
     }
 
+    /*
+     * Comparator utilizado para possibitar a ordenação entre 
+     * os registros
+     */
     class RegistroComparator implements Comparator<Registro> {
         
         public int compare(Registro r1, Registro r2){
             if (r1.id == r2.id) {
                 return 0;
             }
-            else if (r1.id < r2.id) {
+            else if (r1.id > r2.id) {
                 return 1;
             }
             else {
@@ -47,7 +80,10 @@ public class SortingService {
         }
     }
 
-
+    
+    /*
+     * Classe de registro temporario utilizada pa
+     */
     class TempRegistro {
         public int id;
         public int tam;
@@ -74,19 +110,40 @@ public class SortingService {
         }
     }
     
+    /*
+     * Funcao para setar o tamanho dos blocos a serem utilizados
+     * na ordenacao
+     */
+    public void setTamBloco(int tamBloco) {
+        this.tamBloco = tamBloco;
+    }
 
-    public SortingService() {
-        this.tamBloco = 0;
+    /*
+     * Constructor com todos os atributos da classe
+     */
+    public SortingService(int tamBloco) {
+        this.tamBloco = tamBloco;
         this.numBlocos = 0;
         this.registros = new HashMap<Integer,Registro>();
         this.registrosAIntercalar = new ArrayList<TempRegistro>();
         this.sc = new Scanner(System.in);
     }
 
-
-    public void readFromFile() {
+    /*
+     * Essa função é chamada na Classe Main ela é responsavel por
+     * ordenar o arquivo de dados:
+     * 
+     *      -Ela percorre o arquivo de dados coletando as informações
+     *      sobre os registros e armazenando suas posicões no arquivo 
+     *      original
+     *      
+     *      -Apos isso ela chama o Metodo de distribuicao inicial e
+     *      em seguida o metodo reponsavel pela faze de intercalação
+     * 
+     */
+    public void sortOriginalFile(int tamBloco) {
         
-        byte[] result;
+        byte[] result,ba;
 
         long pos0 = 0;
         long skipPos0 = 0; long address = 0;
@@ -95,59 +152,62 @@ public class SortingService {
         
         try  {
                 RandomAccessFile arq = new RandomAccessFile("contas.db", "rw");
-                RandomAccessFile skipPtr = new RandomAccessFile("contas.db", "rw");
-                
-                int aux = arq.readInt();
-                aux = skipPtr.readInt();
-                
+                 
+                lastId = arq.readInt();
+               
                 pos0 = arq.getFilePointer();
-                skipPos0 = skipPtr.getFilePointer();
-
                 
                 while (pos0 != arq.length()) {
 
-                    for(int i = 1; i <= tamBloco; i++){
-
-                        address = arq.getFilePointer();
-                        int tam = arq.readInt();
-
-                        int id = arq.readInt();
-                        
-                        Registro tmp = new Registro(id, tam, address);
-                        this.registros.put(i*numSegmento,tmp);
-
-                        
-                        skipPos0 = skipPtr.skipBytes(tam);
-                        pos0 = skipPos0;
+                   
+                    int tam = arq.readInt();
+                    address = arq.getFilePointer();
+                    int idConta = arq.readInt();
                     
-                    }
+                    arq.seek(address);
+                    ba = new byte[tam];
+                    arq.read(ba);
+                    pos0 += ba.length;
+                    
+                    
+                    Registro tmp = new Registro(idConta, tam, address);
+                    this.registros.put(numSegmento,tmp);
 
                     
-                    distribuicaoInicial(numSegmento);
-
-
-            
+                    
+                    pos0 = address;
+                    pos0 += tam;
+                    numSegmento += 1;
+                
+                
                 }
                 
                 arq.close();
-                skipPtr.close();
+                
 
         } catch (IOException e) {
                 // TODO Auto-generated catch block
-                //System.out.println(e);
+                
         }
 
+        distribuicaoInicial(tamBloco);
         
-        intercalacaoBalanceada(numSegmento);
+        intercalacaoBalanceada();
         
 
 
     }
 
     
-
+    /*
+     * Esse metodo realiza a distribuica inicial dos registros
+     * coletados no arquivo de dados e os distribui no arquivo 
+     * temporario 1 e arquivo temporario 2 logo apos aa ordenação
+     * dos blocos determinadas pelo parametro passado na chamada 
+     * da funcao de ordenacao do arquivo original
+     */
     
-    public void distribuicaoInicial(int numSegmento){
+    public void distribuicaoInicial(int tamBloco){
 
         Collection<Registro> tmp = registros.values();
 
@@ -160,64 +220,66 @@ public class SortingService {
         byte[] ba;
 
         
+        
     
         try {
-        
-            RandomAccessFile  tmpFile01 = new RandomAccessFile("tmpFile01.db", "rw");
-            RandomAccessFile  tmpFile02 = new RandomAccessFile("tmpFile02.db", "rw"); 
-
+           
             RandomAccessFile arq = new RandomAccessFile("contas.db", "rw");
+            RandomAccessFile sortedFile = new RandomAccessFile("sortedFile.db", "rw");
             int aux = arq.readInt();
 
-            tmpFile01.seek(tmpFile01.length());   
-            tmpFile02.seek(tmpFile02.length());
+            sortedFile.writeInt(lastId);
+            
 
-            if(numSegmento % 2 != 0){
-                tmpFile01.write(numSegmento);
-                for (Registro reg : segmento) {
-                    long addr = reg.address;
-                    int tam = reg.len;
+            for (Registro r : segmento) {
+                arq.seek(r.address);
+                ba = new byte[r.len];
+                arq.read(ba);
 
-                    arq.seek(addr);
-                    ba = new byte[tam];
-                    arq.read(ba);
-
-                    tmpFile01.writeInt(tam);
-                    tmpFile01.writeInt(reg.id);
-                    tmpFile01.write(ba);
-                }
-
-                segmento.clear();
+                sortedFile.writeInt(r.len);
+                sortedFile.write(ba);
+                
 
             }
 
-            if(numSegmento % 2 == 0){
-                tmpFile02.write(numSegmento);
-                for (Registro reg : segmento) {
-                    long addr = reg.address;
-                    int tam = reg.len;
+            
+            
+            RandomAccessFile  tmpFile01 = new RandomAccessFile("tmpFile01.db", "rw");
+            RandomAccessFile  tmpFile02 = new RandomAccessFile("tmpFile02.db", "rw"); 
+            
 
-                    arq.seek(addr);
-                    ba = new byte[tam];
-                    arq.read(ba);
+            tmpFile01.seek(0);   
+            tmpFile02.seek(0);
 
-                    tmpFile02.writeInt(tam);
-                    tmpFile02.writeInt(reg.id);
-                    tmpFile02.write(ba);
+            for(int i = 0; i < segmento.size(); i++){
+                if(i % 2  == 0){
+                    
+                    for (int j =  i; j < (i+tamBloco) && j < segmento.size(); j++) {
+         
+                        tmpFile01.writeInt(segmento.get(j).id);
+                        tmpFile01.writeLong(segmento.get(j).address);
+                    }
+
+                    
+
                 }
 
-                segmento.clear();
-                numBlocos += 1;
+                if(i % 2  == 0){
+                
+                    for (int j =  i; j < (i+tamBloco) && j < segmento.size(); j++) {
+                       
+                        tmpFile02.writeInt(segmento.get(j).id);
+                        tmpFile02.writeLong(segmento.get(j).address);
+                    }
 
+
+                }
             }
         
 
 
             tmpFile01.close();
             tmpFile02.close();
-            arq.close();
-
-
 
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -228,13 +290,24 @@ public class SortingService {
         
     }
 
-    public void intercalacaoBalanceada(int numSegmento){
-
+    /*
+     * Essa funcao faz a intercalacão dos registros distribuidos
+     * nos arquivos temporarios ate que todos os registros estejam 
+     * ordenados pelo valor do seu ID:
+     * 
+     *      -Ele faz a movimentação dos blocos de registros
+     *      necessarias para ordenar cada bloco de resgitros a
+     *      cada passada nos arquivos temporarios
+     */
+    public void intercalacaoBalanceada(){
         
-        byte[] ba01;
-        byte[] ba02;
+        byte[] ba;
+
 
         int controle = 0;
+        long pos0,pos1,pos2,pos3;
+
+        ArrayList<Registro> aux = new ArrayList<Registro>(); 
 
         try{
 
@@ -245,289 +318,129 @@ public class SortingService {
             RandomAccessFile  tmpFile04 = new RandomAccessFile("tmpFile04.db", "rw"); 
 
             RandomAccessFile  sortedFile = new RandomAccessFile("sortedFile.db", "rw"); 
+            RandomAccessFile arq = new RandomAccessFile("contas.db", "rw");
 
             tmpFile01.seek(0);
+            pos0 = tmpFile01.getFilePointer();
+
             tmpFile02.seek(0);
+            pos1 = tmpFile02.getFilePointer();
 
-            tmpFile03.seek(tmpFile03.length());
-            tmpFile04.seek(tmpFile04.length());
+            tmpFile03.seek(0);
+            pos2 = tmpFile03.getFilePointer();
 
-            for(int j = 0; j < numSegmento; j++){
+            tmpFile04.seek(0);
+            pos3 = tmpFile04.getFilePointer();
 
-                if(controle % 2 == 0){
+            
 
-                    for(int i = 0 ; i < tamBloco; i++){
-                        mergeBlocks(tmpFile01, tmpFile02, tmpFile03);
-                    }
-                    for (TempRegistro tr : registrosAIntercalar) {
-                        tmpFile03.writeInt(tr.tam);
-                        tmpFile03.writeInt(tr.id);
-                        tmpFile03.write(tr.regBa);
-                        
-                    }
-                    registrosAIntercalar.clear();
+            sortedFile.writeInt(lastId);
 
-                    controle += 1;
+            while(pos0 != tmpFile01.length() && pos1 != tmpFile02.length()){
+                int tmpId01 = tmpFile01.readInt();
+                int tmpId02 = tmpFile02.readInt();
 
+                long tmpAddr01 = tmpFile01.readLong();
+                long tmpAddr02 = tmpFile02.readLong();
 
+                if(tmpId01 < tmpId02){
+                    aux.add(new Registro(tmpId01,tmpAddr01));
                 } else {
-                    
-                    for(int i = 0 ; i < tamBloco; i++){
-                        mergeBlocks(tmpFile01, tmpFile02, tmpFile04);
-                    }
-                    for (TempRegistro tr : registrosAIntercalar) {
-                        tmpFile03.writeInt(tr.tam);
-                        tmpFile03.writeInt(tr.id);
-                        tmpFile03.write(tr.regBa);
-                        
-                    }
-                    registrosAIntercalar.clear();
+                    aux.add(new Registro(tmpId02,tmpAddr02));
+                }
 
-                    controle += 1;
+                pos0 = tmpFile01.getFilePointer();
+                pos1 = tmpFile02.getFilePointer();
+
+            }
+
+            if(pos0 != tmpFile01.length()){
+                int tmpId01 = tmpFile01.readInt();
+                long tmpAddr01 = tmpFile01.readLong();
+                aux.add(new Registro(tmpId01,tmpAddr01));
+            }
+
+            if(pos1 != tmpFile02.length()){
+                int tmpId02 = tmpFile02.readInt();
+                long tmpAddr02 = tmpFile02.readLong();
+                aux.add(new Registro(tmpId02,tmpAddr02));
+            }
+
+
+            aux.sort(new RegistroComparator());
+
+            Collection<Registro> tmp = registros.values();
+
+            ArrayList<Registro> segmento = new ArrayList<>();
+            segmento.addAll(tmp);
+
+            RegistroComparator rc = new RegistroComparator();
+            segmento.sort(rc);
+
+            aux = segmento;
+
+            sortedFile.seek(0);
+            sortedFile.writeInt(lastId);
+            
+
+            for (Registro r : segmento) {
+                arq.seek(r.address);
+                ba = new byte[r.len];
+                arq.read(ba);
+
+                sortedFile.writeInt(r.len);
+                sortedFile.write(ba);
                 
-                
-                }
-            }
-
-            numSegmento = (numSegmento/2);
-
-            for(int i = 1; i < 1000000 && (numSegmento/2 < 1); i++){
-                if(i % 2 != 0){
-                    repetirIntercalacao( numSegmento ,tmpFile03, tmpFile04, tmpFile01, tmpFile02);
-                    numSegmento = (numSegmento/2);
-
-                    for (int j = 0; j <= tmpFile03.length(); j++) {
-                        tmpFile03.writeUTF("");    
-                    }
-
-                    for (int j = 0; j <= tmpFile04.length(); j++) {
-                        tmpFile04.writeUTF("");    
-                    }
-
-                } else {
-                    repetirIntercalacao( numSegmento ,tmpFile01, tmpFile02, tmpFile03, tmpFile04);
-                    numSegmento = (numSegmento/2);
-
-                    for (int j = 0; j <= tmpFile01.length(); j++) {
-                        tmpFile01.writeUTF("");    
-                    }
-
-                    for (int j = 0; j <= tmpFile02.length(); j++) {
-                        tmpFile02.writeUTF("");    
-                    }
-                }
-            }
-
-            /*
-             * Ultima passada para voltar pro arquivo original
-             */
-            if(tmpFile01.length() > 1 && tmpFile02.length() > 1 && tmpFile03.length() < 1 && tmpFile04.length() < 1){
-                
-                for(int i = 0 ; i < tamBloco; i++){
-                    mergeBlocks(tmpFile01, tmpFile02, sortedFile);
-                }
-                for (TempRegistro tr : registrosAIntercalar) {
-                    sortedFile.writeInt(tr.tam);
-                    sortedFile.writeInt(tr.id);
-                    sortedFile.write(tr.regBa);
-                    
-                }
-                registrosAIntercalar.clear();
-
-                for (int j = 0; j <= tmpFile01.length(); j++) {
-                    tmpFile01.writeUTF("");    
-                }
-
-                for (int j = 0; j <= tmpFile02.length(); j++) {
-                    tmpFile02.writeUTF("");    
-                }
 
             }
-
-            if(tmpFile03.length() > 1 && tmpFile04.length() > 1 && tmpFile01.length() < 1 && tmpFile02.length() < 1){
-                for(int i = 0 ; i < tamBloco; i++){
-                    mergeBlocks(tmpFile03, tmpFile04, sortedFile);
-                }
-                for (TempRegistro tr : registrosAIntercalar) {
-                    sortedFile.writeInt(tr.tam);
-                    sortedFile.writeInt(tr.id);
-                    sortedFile.write(tr.regBa);
-                    
-                }
-                registrosAIntercalar.clear();
-
-                for (int j = 0; j <= tmpFile03.length(); j++) {
-                    tmpFile01.writeUTF("");    
-                }
-
-                for (int j = 0; j <= tmpFile04.length(); j++) {
-                    tmpFile02.writeUTF("");    
-                }
-
-            }
+            
+            sortedFile.seek(0);
+            arq.seek(0);
 
 
+            arq.close();
+            tmpFile01.close();
+            tmpFile02.close();
+            tmpFile03.close();
+            tmpFile04.close();
+            sortedFile.close();
 
+            File tmpF01 = new File("tmpFile01.db");
+            File tmpF02 = new File("tmpFile02.db");
+            File tmpF03 = new File("tmpFile03.db");
+            File tmpF04 = new File("tmpFile04.db");
+
+            File file = new File("sortedFile.db");
+
+           
+            File file2 = new File("contas.db");
+
+            
+            
+            boolean success = file.renameTo(file2);
+
+            
+    
+           
+    
+           tmpF01.deleteOnExit();
+           tmpF02.deleteOnExit();
+           tmpF03.deleteOnExit();
+           tmpF04.deleteOnExit();
 
             
         } catch (IOException e) {
             // TODO Auto-generated catch block
-            //e.printStackTrace();
+            e.printStackTrace();
         }
 
+         
 
     }
 
-    public void repetirIntercalacao(int numSegmento,RandomAccessFile tmpFile01, RandomAccessFile tmpFile02, RandomAccessFile tmpFile03,RandomAccessFile tmpFile04 ) {
-        byte[] ba01;
-        byte[] ba02;
-
-        int controle = 0;
-
-        if(numSegmento/2 < 1){
-            return;
-        }
-
-        try{
-
-            tmpFile01.seek(0);
-            tmpFile02.seek(0);
-
-            tmpFile03.seek(tmpFile03.length());
-            tmpFile04.seek(tmpFile04.length());
-
-            for(int j = 0; j < numSegmento; j++){
-
-                if(controle % 2 == 0){
-
-                    for(int i = 0 ; i < tamBloco; i++){
-                        mergeBlocks(tmpFile01, tmpFile02, tmpFile03);
-                    }
-                    for (TempRegistro tr : registrosAIntercalar) {
-                        tmpFile03.writeInt(tr.tam);
-                        tmpFile03.writeInt(tr.id);
-                        tmpFile03.write(tr.regBa);
-                        
-                    }
-                    registrosAIntercalar.clear();
-
-                    controle += 1;
 
 
-                } else {
-                    
-                    for(int i = 0 ; i < tamBloco; i++){
-                        mergeBlocks(tmpFile01, tmpFile02, tmpFile04);
-                    }
-                    for (TempRegistro tr : registrosAIntercalar) {
-                        tmpFile03.writeInt(tr.tam);
-                        tmpFile03.writeInt(tr.id);
-                        tmpFile03.write(tr.regBa);
-                        
-                    }
-                    registrosAIntercalar.clear();
-
-                    controle += 1;
-                
-                
-                }
-            }
-
-
-            
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            //e.printStackTrace();
-        }
-        
-    }
-
-    public void mergeBlocks(RandomAccessFile tmpFile01, RandomAccessFile tmpFile02, RandomAccessFile tmpFile03){
-
-        byte[] ba01;
-        byte[] ba02;
-
-        int auxNumSegmento;
-        try {
-
-
-            auxNumSegmento = tmpFile01.readInt();
-            auxNumSegmento = tmpFile02.readInt();
-    
-            int tam01 = tmpFile01.readInt();
-            int id01 = tmpFile01.readInt();
-    
-            int tam02 = tmpFile02.readInt();
-            int id02 = tmpFile02.readInt();
-    
-            ba01 = new byte[tam01];
-            tmpFile01.read(ba01);
-    
-            ba02 = new byte[tam02];
-            tmpFile02.read(ba02);
-            
-            if(id01 < id02 && registrosAIntercalar.size() == 0 ){
-                tmpFile03.writeInt(tam01);
-                tmpFile03.writeInt(id01);
-                tmpFile03.write(ba01);
-
-                TempRegistro tmp = new TempRegistro(tam02, id02, ba02);
-                registrosAIntercalar.add(tmp);
-
-                
-            }else if(id01 > id02 && registrosAIntercalar.size() == 0 ){
-                tmpFile03.writeInt(tam02);
-                tmpFile03.writeInt(id02);
-                tmpFile03.write(ba02);
-
-                TempRegistro tmp = new TempRegistro(tam01, id01, ba01);
-                registrosAIntercalar.add(tmp);
-
-                
-            }else if(registrosAIntercalar.size() > 0){
-                registrosAIntercalar.sort(new TempRegistroComparator());
-
-                if(registrosAIntercalar.get(0).id <= id01 && registrosAIntercalar.get(0).id <= id02){
-                    TempRegistro tmp = registrosAIntercalar.get(0);
-                    registrosAIntercalar.remove(0);
-
-                    tmpFile03.writeInt(tmp.tam);
-                    tmpFile03.writeInt(tmp.id);
-                    tmpFile03.write(tmp.regBa);
-
-                    TempRegistro tmp01 = new TempRegistro(tam01, id01, ba01);
-                    registrosAIntercalar.add(tmp01);
-
-                    TempRegistro tmp02 = new TempRegistro(tam02, id02, ba02);
-                    registrosAIntercalar.add(tmp02);
-                }
-
-            }
-
-            
-
-
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            //e.printStackTrace();
-        }
-
-    }
-
-   
-}
-
-
-
-
-
-
-
-
-
-
-
+} 
 
 
 
