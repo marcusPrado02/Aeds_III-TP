@@ -1,15 +1,26 @@
 import java.io.IOException;
 
+/*
+ * Importamos todos as classes do pacote services
+ */
 import services.*;
 
-
+/*
+ *  Está é a classe principal do programa:
+ *      
+ *      - Ela instacia os Services a serem usados no
+ *      enquanto o programa estiver rodando
+ *      
+ *      - Instanciamos a classe Menu passando os services 
+ *      como parametros
+ *
+ *      - Rodamos a funcao loop que executará todos os 
+ *      servicos quando solicitada
+ *       
+*/
 public class Main {
 
     public static void main(String[] args) throws InterruptedException, IOException{
-
-        //Jogador j1= new Jogador(25, "Conceição", 49.90F);
-        //Jogador j2= new Jogador(37, "José Carlos", 62.50F);
-        //Jogador j3= new Jogador(291, "Pedro", 53.45F);
 
         
         CRUDService crud =  new CRUDService();
